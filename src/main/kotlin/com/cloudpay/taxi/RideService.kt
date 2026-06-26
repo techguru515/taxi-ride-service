@@ -14,23 +14,23 @@ class RideService(
     }
 
     fun acceptRide(rideId: RideId, occurredAt: Instant = Instant.EPOCH) {
-        append(rideId, RideEvent.RideAccepted(rideId, occurredAt))
+        append(rideId) { ride -> ride.accept(occurredAt) }
     }
 
     fun markDriverArrived(rideId: RideId, occurredAt: Instant = Instant.EPOCH) {
-        append(rideId, RideEvent.DriverArrived(rideId, occurredAt))
+        append(rideId) { ride -> ride.markDriverArrived(occurredAt) }
     }
 
     fun pickUpPassenger(rideId: RideId, occurredAt: Instant = Instant.EPOCH) {
-        append(rideId, RideEvent.PassengerPickedUp(rideId, occurredAt))
+        append(rideId) { ride -> ride.pickUpPassenger(occurredAt) }
     }
 
     fun finishRide(rideId: RideId, occurredAt: Instant = Instant.EPOCH) {
-        append(rideId, RideEvent.RideFinished(rideId, occurredAt))
+        append(rideId) { ride -> ride.finish(occurredAt) }
     }
 
     fun cancelRide(rideId: RideId, occurredAt: Instant = Instant.EPOCH) {
-        append(rideId, RideEvent.RideCanceled(rideId, occurredAt))
+        append(rideId) { ride -> ride.cancel(occurredAt) }
     }
 
     fun getStatus(rideId: RideId, at: Instant? = null): RideStatus {
@@ -39,42 +39,26 @@ class RideService(
             throw RideNotFound(rideId)
         }
 
-        return rideEvents
-            .asSequence()
+        val eventsAtTime = rideEvents
             .filter { event -> at == null || !event.occurredAt.isAfter(at) }
             .sortedBy { event -> event.occurredAt }
-            .fold(RideStatus.PENDING) { _, event ->
-                when (event) {
-                    is RideEvent.RideCreated -> RideStatus.PENDING
-                    is RideEvent.RideAccepted -> RideStatus.ACCEPTED
-                    is RideEvent.DriverArrived -> RideStatus.WAITING
-                    is RideEvent.PassengerPickedUp -> RideStatus.DRIVING
-                    is RideEvent.RideFinished -> RideStatus.FINISHED
-                    is RideEvent.RideCanceled -> RideStatus.CANCELED
-                }
-            }
+
+        if (eventsAtTime.isEmpty()) {
+            throw RideNotFound(rideId)
+        }
+
+        return Ride.fromHistory(eventsAtTime).status
     }
 
     fun getEvents(rideId: RideId): List<RideEvent> =
         eventStore.load(rideId)
 
-    private fun append(rideId: RideId, event: RideEvent) {
-        val currentStatus = getStatus(rideId)
-        if (!canApply(currentStatus, event)) {
-            throw InvalidRideTransition(rideId, currentStatus, event)
+    private fun append(rideId: RideId, produceEvent: (Ride) -> RideEvent) {
+        val rideEvents = getEvents(rideId)
+        if (rideEvents.isEmpty()) {
+            throw RideNotFound(rideId)
         }
 
-        eventStore.append(event)
+        eventStore.append(produceEvent(Ride.fromHistory(rideEvents)))
     }
-
-    private fun canApply(currentStatus: RideStatus, event: RideEvent): Boolean =
-        when (event) {
-            is RideEvent.RideCreated -> true
-            is RideEvent.RideAccepted -> currentStatus == RideStatus.PENDING
-            is RideEvent.DriverArrived -> currentStatus == RideStatus.ACCEPTED
-            is RideEvent.PassengerPickedUp -> currentStatus == RideStatus.WAITING
-            is RideEvent.RideFinished -> currentStatus == RideStatus.DRIVING
-            is RideEvent.RideCanceled ->
-                currentStatus in setOf(RideStatus.PENDING, RideStatus.ACCEPTED, RideStatus.WAITING)
-        }
 }
