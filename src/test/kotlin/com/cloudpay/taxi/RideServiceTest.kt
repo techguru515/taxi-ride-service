@@ -272,4 +272,19 @@ class RideServiceTest {
             reader.getEvents(rideId),
         )
     }
+
+    @Test
+    fun `ride cannot be created twice with the same id`() {
+        val service = RideService()
+        val rideId = RideId("ride-1")
+
+        service.createRide(rideId)
+
+        val error = assertFailsWith<RideAlreadyExists> {
+            service.createRide(rideId)
+        }
+
+        assertEquals("Ride ride-1 already exists", error.message)
+        assertEquals(listOf(RideEvent.RideCreated(rideId)), service.getEvents(rideId))
+    }
 }
