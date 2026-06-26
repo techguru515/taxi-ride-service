@@ -2,11 +2,11 @@ package com.cloudpay.taxi
 
 import java.time.Instant
 
-class RideService {
-    private val events = mutableListOf<RideEvent>()
-
+class RideService(
+    private val eventStore: EventStore = InMemoryEventStore(),
+) {
     fun createRide(rideId: RideId, occurredAt: Instant = Instant.EPOCH) {
-        events.add(RideEvent.RideCreated(rideId, occurredAt))
+        eventStore.append(RideEvent.RideCreated(rideId, occurredAt))
     }
 
     fun acceptRide(rideId: RideId, occurredAt: Instant = Instant.EPOCH) {
@@ -52,7 +52,7 @@ class RideService {
     }
 
     fun getEvents(rideId: RideId): List<RideEvent> =
-        events.filter { it.rideId == rideId }
+        eventStore.load(rideId)
 
     private fun append(rideId: RideId, event: RideEvent) {
         val currentStatus = getStatus(rideId)
@@ -60,7 +60,7 @@ class RideService {
             throw InvalidRideTransition(rideId, currentStatus, event)
         }
 
-        events.add(event)
+        eventStore.append(event)
     }
 
     private fun canApply(currentStatus: RideStatus, event: RideEvent): Boolean =
