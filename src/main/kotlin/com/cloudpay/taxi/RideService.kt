@@ -15,12 +15,22 @@ class RideService {
         events.add(RideEvent.DriverArrived(rideId))
     }
 
+    fun pickUpPassenger(rideId: RideId) {
+        events.add(RideEvent.PassengerPickedUp(rideId))
+    }
+
+    fun finishRide(rideId: RideId) {
+        events.add(RideEvent.RideFinished(rideId))
+    }
+
     fun getStatus(rideId: RideId): RideStatus {
         return getEvents(rideId).fold(RideStatus.PENDING) { _, event ->
             when (event) {
                 is RideEvent.RideCreated -> RideStatus.PENDING
                 is RideEvent.RideAccepted -> RideStatus.ACCEPTED
                 is RideEvent.DriverArrived -> RideStatus.WAITING
+                is RideEvent.PassengerPickedUp -> RideStatus.DRIVING
+                is RideEvent.RideFinished -> RideStatus.FINISHED
             }
         }
     }
