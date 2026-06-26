@@ -57,4 +57,50 @@ class RideServiceTest {
             service.getEvents(rideId),
         )
     }
+
+    @Test
+    fun `picking up passenger stores a PassengerPickedUp event and changes status to driving`() {
+        val service = RideService()
+        val rideId = RideId("ride-1")
+
+        service.createRide(rideId)
+        service.acceptRide(rideId)
+        service.markDriverArrived(rideId)
+        service.pickUpPassenger(rideId)
+
+        assertEquals(RideStatus.DRIVING, service.getStatus(rideId))
+        assertEquals(
+            listOf(
+                RideEvent.RideCreated(rideId),
+                RideEvent.RideAccepted(rideId),
+                RideEvent.DriverArrived(rideId),
+                RideEvent.PassengerPickedUp(rideId),
+            ),
+            service.getEvents(rideId),
+        )
+    }
+
+    @Test
+    fun `finishing a ride stores a RideFinished event and changes status to finished`() {
+        val service = RideService()
+        val rideId = RideId("ride-1")
+
+        service.createRide(rideId)
+        service.acceptRide(rideId)
+        service.markDriverArrived(rideId)
+        service.pickUpPassenger(rideId)
+        service.finishRide(rideId)
+
+        assertEquals(RideStatus.FINISHED, service.getStatus(rideId))
+        assertEquals(
+            listOf(
+                RideEvent.RideCreated(rideId),
+                RideEvent.RideAccepted(rideId),
+                RideEvent.DriverArrived(rideId),
+                RideEvent.PassengerPickedUp(rideId),
+                RideEvent.RideFinished(rideId),
+            ),
+            service.getEvents(rideId),
+        )
+    }
 }
