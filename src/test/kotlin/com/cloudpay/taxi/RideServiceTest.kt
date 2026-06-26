@@ -238,4 +238,16 @@ class RideServiceTest {
         assertEquals(RideStatus.WAITING, service.getStatus(rideId, at = arrivedAt.plusSeconds(1)))
         assertEquals(RideStatus.WAITING, service.getStatus(rideId))
     }
+
+    @Test
+    fun `unknown ride status cannot be queried`() {
+        val service = RideService()
+        val rideId = RideId("missing-ride")
+
+        val error = assertFailsWith<RideNotFound> {
+            service.getStatus(rideId)
+        }
+
+        assertEquals("Ride missing-ride was not found", error.message)
+    }
 }
