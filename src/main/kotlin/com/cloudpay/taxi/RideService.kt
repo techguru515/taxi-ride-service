@@ -30,19 +30,24 @@ class RideService {
     }
 
     fun getStatus(rideId: RideId, at: Instant? = null): RideStatus {
-        return getEvents(rideId)
+        val rideEvents = getEvents(rideId)
+        if (rideEvents.isEmpty()) {
+            throw RideNotFound(rideId)
+        }
+
+        return rideEvents
             .asSequence()
             .filter { event -> at == null || !event.occurredAt.isAfter(at) }
             .sortedBy { event -> event.occurredAt }
             .fold(RideStatus.PENDING) { _, event ->
-            when (event) {
-                is RideEvent.RideCreated -> RideStatus.PENDING
-                is RideEvent.RideAccepted -> RideStatus.ACCEPTED
-                is RideEvent.DriverArrived -> RideStatus.WAITING
-                is RideEvent.PassengerPickedUp -> RideStatus.DRIVING
-                is RideEvent.RideFinished -> RideStatus.FINISHED
-                is RideEvent.RideCanceled -> RideStatus.CANCELED
-            }
+                when (event) {
+                    is RideEvent.RideCreated -> RideStatus.PENDING
+                    is RideEvent.RideAccepted -> RideStatus.ACCEPTED
+                    is RideEvent.DriverArrived -> RideStatus.WAITING
+                    is RideEvent.PassengerPickedUp -> RideStatus.DRIVING
+                    is RideEvent.RideFinished -> RideStatus.FINISHED
+                    is RideEvent.RideCanceled -> RideStatus.CANCELED
+                }
             }
     }
 
