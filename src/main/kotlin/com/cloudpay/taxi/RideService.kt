@@ -6,6 +6,10 @@ class RideService(
     private val eventStore: EventStore = InMemoryEventStore(),
 ) {
     fun createRide(rideId: RideId, occurredAt: Instant = Instant.EPOCH) {
+        if (getEvents(rideId).isNotEmpty()) {
+            throw RideAlreadyExists(rideId)
+        }
+
         eventStore.append(RideEvent.RideCreated(rideId, occurredAt))
     }
 
