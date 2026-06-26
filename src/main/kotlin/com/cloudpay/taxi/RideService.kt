@@ -8,23 +8,23 @@ class RideService {
     }
 
     fun acceptRide(rideId: RideId) {
-        events.add(RideEvent.RideAccepted(rideId))
+        append(rideId, RideEvent.RideAccepted(rideId))
     }
 
     fun markDriverArrived(rideId: RideId) {
-        events.add(RideEvent.DriverArrived(rideId))
+        append(rideId, RideEvent.DriverArrived(rideId))
     }
 
     fun pickUpPassenger(rideId: RideId) {
-        events.add(RideEvent.PassengerPickedUp(rideId))
+        append(rideId, RideEvent.PassengerPickedUp(rideId))
     }
 
     fun finishRide(rideId: RideId) {
-        events.add(RideEvent.RideFinished(rideId))
+        append(rideId, RideEvent.RideFinished(rideId))
     }
 
     fun cancelRide(rideId: RideId) {
-        events.add(RideEvent.RideCanceled(rideId))
+        append(rideId, RideEvent.RideCanceled(rideId))
     }
 
     fun getStatus(rideId: RideId): RideStatus {
@@ -42,4 +42,24 @@ class RideService {
 
     fun getEvents(rideId: RideId): List<RideEvent> =
         events.filter { it.rideId == rideId }
+
+    private fun append(rideId: RideId, event: RideEvent) {
+        val currentStatus = getStatus(rideId)
+        if (!canApply(currentStatus, event)) {
+            throw InvalidRideTransition(rideId, currentStatus, event)
+        }
+
+        events.add(event)
+    }
+
+    private fun canApply(currentStatus: RideStatus, event: RideEvent): Boolean =
+        when (event) {
+            is RideEvent.RideCreated -> true
+            is RideEvent.RideAccepted -> currentStatus == RideStatus.PENDING
+            is RideEvent.DriverArrived -> currentStatus == RideStatus.ACCEPTED
+            is RideEvent.PassengerPickedUp -> currentStatus == RideStatus.WAITING
+            is RideEvent.RideFinished -> currentStatus == RideStatus.DRIVING
+            is RideEvent.RideCanceled ->
+                currentStatus in setOf(RideStatus.PENDING, RideStatus.ACCEPTED, RideStatus.WAITING)
+        }
 }
