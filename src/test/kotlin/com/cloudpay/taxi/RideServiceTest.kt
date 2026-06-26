@@ -103,4 +103,64 @@ class RideServiceTest {
             service.getEvents(rideId),
         )
     }
+
+    @Test
+    fun `canceling a pending ride stores a RideCanceled event and changes status to canceled`() {
+        val service = RideService()
+        val rideId = RideId("ride-1")
+
+        service.createRide(rideId)
+        service.cancelRide(rideId)
+
+        assertEquals(RideStatus.CANCELED, service.getStatus(rideId))
+        assertEquals(
+            listOf(
+                RideEvent.RideCreated(rideId),
+                RideEvent.RideCanceled(rideId),
+            ),
+            service.getEvents(rideId),
+        )
+    }
+
+    @Test
+    fun `canceling an accepted ride stores a RideCanceled event and changes status to canceled`() {
+        val service = RideService()
+        val rideId = RideId("ride-1")
+
+        service.createRide(rideId)
+        service.acceptRide(rideId)
+        service.cancelRide(rideId)
+
+        assertEquals(RideStatus.CANCELED, service.getStatus(rideId))
+        assertEquals(
+            listOf(
+                RideEvent.RideCreated(rideId),
+                RideEvent.RideAccepted(rideId),
+                RideEvent.RideCanceled(rideId),
+            ),
+            service.getEvents(rideId),
+        )
+    }
+
+    @Test
+    fun `canceling a waiting ride stores a RideCanceled event and changes status to canceled`() {
+        val service = RideService()
+        val rideId = RideId("ride-1")
+
+        service.createRide(rideId)
+        service.acceptRide(rideId)
+        service.markDriverArrived(rideId)
+        service.cancelRide(rideId)
+
+        assertEquals(RideStatus.CANCELED, service.getStatus(rideId))
+        assertEquals(
+            listOf(
+                RideEvent.RideCreated(rideId),
+                RideEvent.RideAccepted(rideId),
+                RideEvent.DriverArrived(rideId),
+                RideEvent.RideCanceled(rideId),
+            ),
+            service.getEvents(rideId),
+        )
+    }
 }
