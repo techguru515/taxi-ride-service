@@ -8,4 +8,5 @@ sealed interface RideEvent {
     data class DriverArrived(override val rideId: RideId) : RideEvent
     data class PassengerPickedUp(override val rideId: RideId) : RideEvent
     data class RideFinished(override val rideId: RideId) : RideEvent
+    data class RideCanceled(override val rideId: RideId) : RideEvent
 }
