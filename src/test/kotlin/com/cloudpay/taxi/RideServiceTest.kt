@@ -250,4 +250,26 @@ class RideServiceTest {
 
         assertEquals("Ride missing-ride was not found", error.message)
     }
+
+    @Test
+    fun `status is rebuilt from events stored outside the service`() {
+        val eventStore = InMemoryEventStore()
+        val writer = RideService(eventStore)
+        val reader = RideService(eventStore)
+        val rideId = RideId("ride-1")
+
+        writer.createRide(rideId)
+        writer.acceptRide(rideId)
+        writer.markDriverArrived(rideId)
+
+        assertEquals(RideStatus.WAITING, reader.getStatus(rideId))
+        assertEquals(
+            listOf(
+                RideEvent.RideCreated(rideId),
+                RideEvent.RideAccepted(rideId),
+                RideEvent.DriverArrived(rideId),
+            ),
+            reader.getEvents(rideId),
+        )
+    }
 }
