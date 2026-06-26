@@ -1,5 +1,6 @@
 package com.cloudpay.taxi
 
+import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -218,5 +219,23 @@ class RideServiceTest {
 
         assertEquals("Cannot move ride ride-1 from DRIVING using RideCanceled", error.message)
         assertEquals(RideStatus.DRIVING, service.getStatus(rideId))
+    }
+
+    @Test
+    fun `status can be queried at a point in time`() {
+        val service = RideService()
+        val rideId = RideId("ride-1")
+        val createdAt = Instant.parse("2026-06-26T10:00:00Z")
+        val acceptedAt = Instant.parse("2026-06-26T10:05:00Z")
+        val arrivedAt = Instant.parse("2026-06-26T10:10:00Z")
+
+        service.createRide(rideId, occurredAt = createdAt)
+        service.acceptRide(rideId, occurredAt = acceptedAt)
+        service.markDriverArrived(rideId, occurredAt = arrivedAt)
+
+        assertEquals(RideStatus.PENDING, service.getStatus(rideId, at = createdAt.plusSeconds(1)))
+        assertEquals(RideStatus.ACCEPTED, service.getStatus(rideId, at = acceptedAt.plusSeconds(1)))
+        assertEquals(RideStatus.WAITING, service.getStatus(rideId, at = arrivedAt.plusSeconds(1)))
+        assertEquals(RideStatus.WAITING, service.getStatus(rideId))
     }
 }
