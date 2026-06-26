@@ -3,6 +3,7 @@ package com.cloudpay.taxi
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertFailsWith
 
 class RideServiceTest {
     @Test
@@ -162,5 +163,60 @@ class RideServiceTest {
             ),
             service.getEvents(rideId),
         )
+    }
+
+    @Test
+    fun `driver cannot arrive before ride is accepted`() {
+        val service = RideService()
+        val rideId = RideId("ride-1")
+
+        service.createRide(rideId)
+
+        val error = assertFailsWith<InvalidRideTransition> {
+            service.markDriverArrived(rideId)
+        }
+
+        assertEquals("Cannot move ride ride-1 from PENDING using DriverArrived", error.message)
+        assertEquals(listOf(RideEvent.RideCreated(rideId)), service.getEvents(rideId))
+    }
+
+    @Test
+    fun `passenger cannot be picked up before driver arrives`() {
+        val service = RideService()
+        val rideId = RideId("ride-1")
+
+        service.createRide(rideId)
+        service.acceptRide(rideId)
+
+        val error = assertFailsWith<InvalidRideTransition> {
+            service.pickUpPassenger(rideId)
+        }
+
+        assertEquals("Cannot move ride ride-1 from ACCEPTED using PassengerPickedUp", error.message)
+        assertEquals(
+            listOf(
+                RideEvent.RideCreated(rideId),
+                RideEvent.RideAccepted(rideId),
+            ),
+            service.getEvents(rideId),
+        )
+    }
+
+    @Test
+    fun `ride cannot be canceled once passenger has been picked up`() {
+        val service = RideService()
+        val rideId = RideId("ride-1")
+
+        service.createRide(rideId)
+        service.acceptRide(rideId)
+        service.markDriverArrived(rideId)
+        service.pickUpPassenger(rideId)
+
+        val error = assertFailsWith<InvalidRideTransition> {
+            service.cancelRide(rideId)
+        }
+
+        assertEquals("Cannot move ride ride-1 from DRIVING using RideCanceled", error.message)
+        assertEquals(RideStatus.DRIVING, service.getStatus(rideId))
     }
 }
