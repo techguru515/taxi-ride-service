@@ -1,34 +1,40 @@
 package com.cloudpay.taxi
 
+import java.time.Instant
+
 class RideService {
     private val events = mutableListOf<RideEvent>()
 
-    fun createRide(rideId: RideId) {
-        events.add(RideEvent.RideCreated(rideId))
+    fun createRide(rideId: RideId, occurredAt: Instant = Instant.EPOCH) {
+        events.add(RideEvent.RideCreated(rideId, occurredAt))
     }
 
-    fun acceptRide(rideId: RideId) {
-        append(rideId, RideEvent.RideAccepted(rideId))
+    fun acceptRide(rideId: RideId, occurredAt: Instant = Instant.EPOCH) {
+        append(rideId, RideEvent.RideAccepted(rideId, occurredAt))
     }
 
-    fun markDriverArrived(rideId: RideId) {
-        append(rideId, RideEvent.DriverArrived(rideId))
+    fun markDriverArrived(rideId: RideId, occurredAt: Instant = Instant.EPOCH) {
+        append(rideId, RideEvent.DriverArrived(rideId, occurredAt))
     }
 
-    fun pickUpPassenger(rideId: RideId) {
-        append(rideId, RideEvent.PassengerPickedUp(rideId))
+    fun pickUpPassenger(rideId: RideId, occurredAt: Instant = Instant.EPOCH) {
+        append(rideId, RideEvent.PassengerPickedUp(rideId, occurredAt))
     }
 
-    fun finishRide(rideId: RideId) {
-        append(rideId, RideEvent.RideFinished(rideId))
+    fun finishRide(rideId: RideId, occurredAt: Instant = Instant.EPOCH) {
+        append(rideId, RideEvent.RideFinished(rideId, occurredAt))
     }
 
-    fun cancelRide(rideId: RideId) {
-        append(rideId, RideEvent.RideCanceled(rideId))
+    fun cancelRide(rideId: RideId, occurredAt: Instant = Instant.EPOCH) {
+        append(rideId, RideEvent.RideCanceled(rideId, occurredAt))
     }
 
-    fun getStatus(rideId: RideId): RideStatus {
-        return getEvents(rideId).fold(RideStatus.PENDING) { _, event ->
+    fun getStatus(rideId: RideId, at: Instant? = null): RideStatus {
+        return getEvents(rideId)
+            .asSequence()
+            .filter { event -> at == null || !event.occurredAt.isAfter(at) }
+            .sortedBy { event -> event.occurredAt }
+            .fold(RideStatus.PENDING) { _, event ->
             when (event) {
                 is RideEvent.RideCreated -> RideStatus.PENDING
                 is RideEvent.RideAccepted -> RideStatus.ACCEPTED
@@ -37,7 +43,7 @@ class RideService {
                 is RideEvent.RideFinished -> RideStatus.FINISHED
                 is RideEvent.RideCanceled -> RideStatus.CANCELED
             }
-        }
+            }
     }
 
     fun getEvents(rideId: RideId): List<RideEvent> =
