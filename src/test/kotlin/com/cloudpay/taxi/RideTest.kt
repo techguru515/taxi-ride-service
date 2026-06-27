@@ -30,4 +30,20 @@ class RideTest {
 
         assertEquals("Cannot move ride ride-1 from PENDING using DriverArrived", error.message)
     }
+
+    @Test
+    fun `ride history cannot skip lifecycle transitions`() {
+        val rideId = RideId("ride-1")
+
+        val error = assertFailsWith<InvalidRideTransition> {
+            Ride.fromHistory(
+                listOf(
+                    RideEvent.RideCreated(rideId),
+                    RideEvent.DriverArrived(rideId),
+                ),
+            )
+        }
+
+        assertEquals("Cannot move ride ride-1 from PENDING using DriverArrived", error.message)
+    }
 }
